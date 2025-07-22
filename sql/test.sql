@@ -1,4 +1,5 @@
 CREATE SCHEMA test;
+DROP SCHEMA test;
 # 테스트
 CREATE TABLE users
 (
