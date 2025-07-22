@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export function MemberAdd() {
-  const [id_, setId_] = useState("");
+  const [id, setId] = useState("");
   const [password1, setPassword1] = useState("");
   const [password2, setPassword2] = useState("");
   const [email, setEmail] = useState("");
@@ -21,7 +21,7 @@ export function MemberAdd() {
   function handleSaveClick() {
     axios
       .post("/api/member/add", {
-        id_: id_,
+        id: id,
         password1: password1,
         email: email,
         name: name,
@@ -40,7 +40,7 @@ export function MemberAdd() {
         <div>
           <FormGroup className="mb-3" controlId="id_1">
             <FormLabel>아이디</FormLabel>
-            <FormControl value={id_} onChange={(e) => setId_(e.target.value)} />
+            <FormControl value={id} onChange={(e) => setId(e.target.value)} />
           </FormGroup>
         </div>
         <div>
