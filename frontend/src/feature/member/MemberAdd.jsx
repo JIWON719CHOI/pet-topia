@@ -11,7 +11,7 @@ import axios from "axios";
 
 export function MemberAdd() {
   const [id, setId] = useState("");
-  const [password1, setPassword1] = useState("");
+  const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -22,10 +22,10 @@ export function MemberAdd() {
     axios
       .post("/api/member/add", {
         id: id,
-        password1: password1,
+        password: password,
         email: email,
         name: name,
-        nick: nickName,
+        nickName: nickName,
         info: info,
       })
       .then((res) => {})
@@ -47,8 +47,8 @@ export function MemberAdd() {
           <FormGroup className="mb-3" controlId="password1">
             <FormLabel>비밀번호</FormLabel>
             <FormControl
-              value={password1}
-              onChange={(e) => setPassword1(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </FormGroup>
         </div>
