@@ -7,6 +7,7 @@ import {
   Row,
 } from "react-bootstrap";
 import { useEffect, useState } from "react";
+import axios from "axios";
 
 export function MemberAdd() {
   const [id_, setId_] = useState("");
@@ -17,7 +18,20 @@ export function MemberAdd() {
   const [nickName, setNickName] = useState("");
   const [info, setInfo] = useState("");
 
-  useEffect(() => {}, []);
+  function handleSaveClick() {
+    axios
+      .post("/api/member/add", {
+        id_: id_,
+        password1: password1,
+        email: email,
+        name: name,
+        nick: nickName,
+        info: info,
+      })
+      .then((res) => {})
+      .catch((err) => {})
+      .finally(() => {});
+  }
 
   return (
     <Row className="justify-content-center">
@@ -85,7 +99,7 @@ export function MemberAdd() {
           </FormGroup>
         </div>
         <div>
-          <Button>가입</Button>
+          <Button onClick={handleSaveClick}>가입</Button>
         </div>
       </Col>
     </Row>
