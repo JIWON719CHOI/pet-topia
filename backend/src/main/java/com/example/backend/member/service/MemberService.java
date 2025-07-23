@@ -14,14 +14,14 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
-    public void add(MemberForm memberForm) {
-        Member member = new Member();
-        member.setId(memberForm.getId());
-        member.setPassword(memberForm.getPassword());
-        member.setEmail(memberForm.getEmail());
-        member.setName(memberForm.getName());
-        member.setNickName(memberForm.getNickName());
-        member.setInfo(memberForm.getInfo());
-        memberRepository.save(member);
-    }
+//    public void add(MemberForm memberForm) {
+//        Member member = new Member();
+//        member.setId(memberForm.getId());
+//        member.setPassword(memberForm.getPassword());
+//        member.setEmail(memberForm.getEmail());
+//        member.setName(memberForm.getName());
+//        member.setNickName(memberForm.getNickName());
+//        member.setInfo(memberForm.getInfo());
+//        memberRepository.save(member);
+//    }
 }
