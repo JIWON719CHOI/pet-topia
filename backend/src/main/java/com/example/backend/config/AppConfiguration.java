@@ -110,7 +110,10 @@ public class AppConfiguration {
                         .defaultSuccessUrl("http://localhost:5173/", true) // OAuth2 로그인 성공 후 홈페이지로 리디렉션
                         .failureUrl("/login?error") // 실패 시 로그인 페이지로 리디렉션
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // TODO 다시 이거로 바꿔야함
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 확인용
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
@@ -121,8 +124,9 @@ public class AppConfiguration {
                             response.getWriter().flush();
                         })
                         .permitAll()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
+                );
+        // TODO 다시 살려야함
+//                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
 
         return http.build();
     }
