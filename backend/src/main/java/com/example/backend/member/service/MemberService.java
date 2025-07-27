@@ -27,6 +27,7 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -80,18 +81,20 @@ public class MemberService {
         s3Client.deleteObject(deleteObjectRequest);
     }
 
+    // 회원 가입(일반 등록시)
     public void add(MemberForm memberForm) {
         this.validate(memberForm);
-        // TODO 구글 로그인(패스워스 없을 때)
-//        if (memberForm.getPassword().isBlank()) {
-//        }
 
         Member member = new Member();
         member.setEmail(memberForm.getEmail().trim());
+        // 일반 회원 가입이므로 비밀번호는 항상 암호화
         member.setPassword(bCryptPasswordEncoder.encode(memberForm.getPassword().trim()));
         member.setInfo(memberForm.getInfo());
         member.setNickName(memberForm.getNickName().trim());
         member.setRole(Role.USER);
+        // provider와 providerId는 일반 회원가입 시 설정 안 함
+        member.setProvider(null);
+        member.setProviderId(null);
 
         memberRepository.save(member);
 
@@ -306,28 +309,37 @@ public class MemberService {
         }
     }
 
+    // 이메일과 비밀번호로만 로그인 시도(OAuth 사용자는 비밀번호 null이므로 다른 예외 발생)
     public String getToken(MemberLoginForm loginForm) {
         Member member = memberRepository.findByEmail(loginForm.getEmail())
                 .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 일치하지 않습니다."));
 
-        if (!bCryptPasswordEncoder.matches(loginForm.getPassword(), member.getPassword())) {
+        // 멤버에 비밀번호가 있다면 유효성을 검사합니다. (일반 계정)
+        if (member.getPassword() != null && !member.getPassword().isBlank()) {
+            if (!bCryptPasswordEncoder.matches(loginForm.getPassword(), member.getPassword())) {
+                throw new RuntimeException("이메일 또는 비밀번호가 일치하지 않습니다.");
+            }
+        } else if (member.getProvider() != null && !member.getProvider().isBlank()) {
+            // 이메일은 있지만 비밀번호가 없고 provider가 설정된 경우 (OAuth 계정)
+            // OAuth 계정인데 이메일/비밀번호로 로그인 시도하는 경우 예외 발생
+            throw new RuntimeException("이 계정은 " + member.getProvider() + "로 가입되었습니다. " + member.getProvider() + " 로그인을 이용해주세요.");
+        } else {
+            // 이메일도 없고 비밀번호도 없는 알 수 없는 경우 (거의 발생하지 않음)
             throw new RuntimeException("이메일 또는 비밀번호가 일치하지 않습니다.");
         }
 
-        // 권한 목록 조회
-//        List<String> authList = memberRepository.findAuthNamesByMemberEmail(member.getEmail());
-        // 이제 AuthRepository를 통해 권한을 조회합니다.
-        List<String> authList = authRepository.findAuthNamesByMemberId(member.getId()); // member.getId() 전달
-        // 또는
-        // List<String> authNames = authRepository.findAuthNamesByMemberEmail(form.getEmail()); // email 전달
-
+        List<String> authList = authRepository.findAuthNamesByMemberId(member.getId());
+        if (authList == null || authList.isEmpty()) {
+            authList = new ArrayList<>();
+            authList.add(member.getRole().name());
+        }
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(60 * 60 * 24 * 365))
                 .subject(member.getEmail())
-                .claim("scp", String.join(" ", authList))  // 수정된 부분
+                .claim("scp", String.join(" ", authList))
                 .build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();

@@ -2,11 +2,14 @@ package com.example.backend.member.controller;
 
 import com.example.backend.member.dto.*;
 import com.example.backend.member.service.MemberService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +22,22 @@ import java.util.Map;
 public class MemberController {
 
     private final MemberService memberService;
+
+    @PostMapping("logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        // 무상태 JWT 설정에서 백엔드에서의 로그아웃은 일반적으로 다음을 포함합니다:
+        // 1. 클라이언트 측에서 JWT를 무효화 (스토리지에서 제거).
+        // 2. (선택 사항) 토큰 블랙리스트/취소 메커니즘이 있다면 토큰을 추가합니다.
+        // 간단한 JWT 설정의 경우, 클라이언트에서 토큰을 제거하는 것으로 충분합니다.
+        // 스프링 시큐리티의 LogoutFilter는 세션 기반 보안의 세션 무효화를 처리할 수 있지만,
+        // 무상태 JWT의 경우, 주로 클라이언트 측 토큰 제거에 의존합니다.
+        // 이 엔드포인트는 단순히 로그아웃을 확인하거나 필요한 경우 보안 컨텍스트를 지울 수 있습니다.
+        SecurityContextHolder.clearContext(); // 스프링 시큐리티 컨텍스트 지우기
+        return ResponseEntity.ok().body(
+                Map.of("message",
+                        Map.of("type", "success",
+                                "text", "로그아웃 되었습니다.")));
+    }
 
     @PostMapping("login")
     public ResponseEntity<?> login(@RequestBody MemberLoginForm loginForm) {

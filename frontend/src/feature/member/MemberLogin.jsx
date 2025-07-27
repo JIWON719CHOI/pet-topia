@@ -66,8 +66,8 @@ export function MemberLogin() {
   function handleGoogleLoginClick() {
     // 여기에 Google OAuth2 인증 흐름을 시작하는 로직이 들어갑니다.
     // 보통 백엔드의 Google 로그인 엔드포인트로 리다이렉트하거나 팝업을 띄웁니다.
-    // 예: window.location.href = '/oauth2/authorization/google';
-    toast.info("Google 로그인 기능은 아직 구현되지 않았습니다.");
+    window.location.href = "/oauth2/authorization/google";
+    // toast.info("Google 로그인 기능은 아직 구현되지 않았습니다.");
     console.log("Google 로그인 버튼 클릭됨");
   }
 

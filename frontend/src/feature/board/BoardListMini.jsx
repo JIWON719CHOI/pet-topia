@@ -16,7 +16,18 @@ export function BoardListMini() {
 
     axios
       .get("/api/board/latest")
-      .then((res) => setBoardList(res.data))
+      .then((res) => {
+        // 백엔드 응답이 배열인지 명시적으로 확인
+        if (Array.isArray(res.data)) {
+          setBoardList(res.data);
+        } else {
+          // 배열이 아닌 경우 오류로 처리하거나, 빈 배열로 강제 설정
+          console.error("API 응답이 배열이 아닙니다:", res.data);
+          setError("게시글 목록 형식이 올바르지 않습니다.");
+          setBoardList([]); // 안전하게 빈 배열로 설정
+        }
+      })
+      // setBoardList(res.data))
       .catch(() => {
         setError("게시글을 불러오는 중 오류가 발생했습니다.");
       })
