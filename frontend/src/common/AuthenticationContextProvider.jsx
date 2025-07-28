@@ -28,6 +28,10 @@ axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log(
+      "DEBUG: Authorization header added:",
+      config.headers.Authorization,
+    ); // 디버그 로그 추가
   }
   return config;
 });

@@ -109,8 +109,10 @@ public class AppConfiguration { // @RequiredArgsConstructor 제거 또는 아래
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // 로그인 및 추가, OAuth2 엔드포인트 접근 허용
-                        .requestMatchers("/api/member/login", "/api/member/add", "/oauth2/**", "/login/oauth2/code/**").permitAll()
+                        // OAuth 먼저 그리고 일반 사용자
+                        .requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll()
+                        .requestMatchers("/api/member/login", "/api/member/add").permitAll()
+                        .requestMatchers("/api/member").permitAll()
                         // 모든 /api/** 경로를 인증없이 접근 허용
                         // TODO: 실제 배포 시에는 인증 필요한 API는 이 permitAll()에서 제외하고 .authenticated()로 보호해야 합니다.
                         .requestMatchers("/api/**").permitAll()
