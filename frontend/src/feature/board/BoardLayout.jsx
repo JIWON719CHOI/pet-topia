@@ -4,6 +4,7 @@ import { BoardListMini } from "./BoardListMini.jsx";
 import img1 from "../../assets/01.png";
 import img2 from "../../assets/02.jpg";
 import img3 from "../../assets/03.jpg";
+import img4 from "../../assets/바다.jpg";
 
 export function BoardLayout() {
   const [activeTab, setActiveTab] = useState("2"); // 탭 상태
@@ -18,7 +19,7 @@ export function BoardLayout() {
         <Carousel.Item>
           <img
             className="d-block w-100"
-            src={img1}
+            src={img4}
             alt="1번째 슬라이드"
             loading="lazy"
             style={{
@@ -28,7 +29,7 @@ export function BoardLayout() {
           />
           <Carousel.Caption>
             <h6>1번째 슬라이드</h6>
-            <p className="d-none d-md-block">똥마려워</p>
+            <p className="d-none d-md-block">시원하지롱</p>
           </Carousel.Caption>
         </Carousel.Item>
 
