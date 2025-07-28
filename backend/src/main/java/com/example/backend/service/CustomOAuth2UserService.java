@@ -1,6 +1,5 @@
-// src/main/java/com/example/backend/service/CustomOAuth2UserService.java
-
-package com.example.backend.service;
+// src/main/java/com/example/backend/config/CustomOAuth2UserService.java
+package com.example.backend.service; // 혹은 적절한 패키지
 
 import com.example.backend.config.CustomOAuth2User;
 import com.example.backend.member.entity.Member;
@@ -19,7 +18,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Service
+@Service // 이 어노테이션이 있다면 AppConfiguration에서 @Bean으로 직접 등록할 필요 없습니다.
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
@@ -32,11 +31,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         OAuth2User oauth2User = super.loadUser(userRequest);
         logger.info("OAuth2User loaded: {}", oauth2User.getAttributes());
 
-        final String registrationId = userRequest.getClientRegistration().getRegistrationId(); // <-- final 추가
-        final Map<String, Object> attributes = oauth2User.getAttributes(); // <-- final 추가
+        final String registrationId = userRequest.getClientRegistration().getRegistrationId(); // final
+        final Map<String, Object> attributes = oauth2User.getAttributes(); // final
 
-        // 람다에서 참조될 변수들은 여기서 final 또는 effectively final로 만들어야 합니다.
-        // 여기서는 바로 값을 할당하여 final 또는 effectively final 상태로 만듭니다.
+        // 이 변수들은 람다 내에서 사용되므로, final 또는 effectively final 이어야 합니다.
+        // if-else 분기 전에 한 번만 할당되도록 보장합니다.
         final String email;
         final String name;
         final String providerId;
@@ -46,11 +45,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             name = (String) attributes.get("name");
             providerId = (String) attributes.get("sub");
         } else {
-            // 다른 OAuth 제공자를 처리하지 않는다면 예외 발생
             throw new OAuth2AuthenticationException("Unsupported provider: " + registrationId);
         }
         logger.info("Provider: {}, Email: {}, Name: {}, ProviderId: {}", registrationId, email, name, providerId);
-
 
         return memberRepository.findByEmail(email)
                 .map(member -> {
@@ -61,21 +58,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         memberRepository.save(member);
                         logger.info("Updated existing member: {}", member.getEmail());
                     }
-                    return new CustomOAuth2User(member, attributes); // final attributes 사용
+                    return new CustomOAuth2User(member, attributes);
                 })
                 .orElseGet(() -> {
-                    logger.info("New member: Registering email {}", email); // final email 사용
+                    logger.info("New member: Registering email {}", email);
                     Member newMember = new Member();
-                    newMember.setEmail(email); // final email 사용
+                    newMember.setEmail(email);
                     newMember.setPassword(null);
-                    newMember.setNickName(name != null ? name : UUID.randomUUID().toString().substring(0, 8)); // final name 사용
-                    newMember.setInfo("OAuth2 user via " + registrationId); // final registrationId 사용
-                    newMember.setProvider(registrationId); // final registrationId 사용
-                    newMember.setProviderId(providerId); // final providerId 사용
-                    newMember.setRole(Member.Role.USER);
+                    newMember.setNickName(name != null ? name : UUID.randomUUID().toString().substring(0, 8));
+                    newMember.setInfo("OAuth2 user via " + registrationId);
+                    newMember.setProvider(registrationId);
+                    newMember.setProviderId(providerId);
+                    newMember.setRole(Member.Role.USER); // Member.Role 임포트 확인
                     memberRepository.save(newMember);
                     logger.info("New member saved: {}", newMember.getEmail());
-                    return new CustomOAuth2User(newMember, attributes); // final attributes 사용
+                    return new CustomOAuth2User(newMember, attributes);
                 });
     }
 }

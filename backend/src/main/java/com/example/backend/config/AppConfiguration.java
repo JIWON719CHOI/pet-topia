@@ -4,6 +4,7 @@ import com.example.backend.auth.repository.AuthRepository;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Member.Role;
 import com.example.backend.member.repository.MemberRepository;
+import com.example.backend.service.CustomOAuth2UserService;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -60,6 +61,7 @@ public class AppConfiguration {
 
     private final MemberRepository memberRepository;
     private final AuthRepository authRepository;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     @Value("classpath:secret/public.pem")
     private RSAPublicKey publicKey;
@@ -105,7 +107,7 @@ public class AppConfiguration {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(this.oauth2UserService())
+                                .userService(customOAuth2UserService)
                         )
                         .defaultSuccessUrl("http://localhost:5173/", true) // OAuth2 로그인 성공 후 홈페이지로 리디렉션
                         .failureUrl("/login?error") // 실패 시 로그인 페이지로 리디렉션
@@ -177,44 +179,44 @@ public class AppConfiguration {
     }
 
     // 구글 OAuth2UserService를 커스터마이징하여 사용자 등록/로그인 처리
-    @Bean
-    public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
-        DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
-        return (userRequest) -> {
-            OAuth2User oauth2User = delegate.loadUser(userRequest);
-
-            String email = oauth2User.getAttribute("email");
-            String name = oauth2User.getAttribute("name"); // 또는 "login" (제공자에 따라 다름)
-            String provider = userRequest.getClientRegistration().getRegistrationId(); // 예: "google"
-            String providerId = oauth2User.getName(); // OAuth2 제공자의 고유 ID
-
-            // 사용자 데이터베이스에 이미 존재하는지 확인
-            return memberRepository.findByEmail(email)
-                    .map(member -> {
-                        // 사용자가 존재하면 필요에 따라 정보 업데이트 (예: 최종 로그인, 이름)
-                        // 또한, 기존 이메일로 첫 OAuth 로그인인 경우 제공자와 providerId가 올바르게 설정되었는지 확인
-                        if (member.getProvider() == null || member.getProviderId() == null) {
-                            member.setProvider(provider);
-                            member.setProviderId(providerId);
-                            memberRepository.save(member);
-                        }
-                        return new CustomOAuth2User(member, oauth2User.getAttributes());
-                    })
-                    .orElseGet(() -> {
-                        // 사용자가 존재하지 않으면 등록
-                        Member newMember = new Member();
-                        newMember.setEmail(email);
-                        // OAuth2의 경우, 보통 비밀번호를 저장하지 않거나 임의의 비밀번호를 생성합니다.
-                        // 나중에 비밀번호 기반 로그인을 허용할 예정이라면 플레이스홀더나 null을 설정할 수 있습니다.
-                        newMember.setPassword(null); // OAuth2 사용자는 비밀번호 없음
-                        newMember.setNickName(name != null ? name : UUID.randomUUID().toString().substring(0, 8)); // 이름 사용 또는 임의 닉네임 생성
-                        newMember.setInfo("OAuth2 user via " + provider);
-                        newMember.setProvider(provider);
-                        newMember.setProviderId(providerId);
-                        newMember.setRole(Role.USER); // 기본 역할
-                        memberRepository.save(newMember);
-                        return new CustomOAuth2User(newMember, oauth2User.getAttributes());
-                    });
-        };
-    }
+//    @Bean
+//    public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
+//        DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
+//        return (userRequest) -> {
+//            OAuth2User oauth2User = delegate.loadUser(userRequest);
+//
+//            String email = oauth2User.getAttribute("email");
+//            String name = oauth2User.getAttribute("name"); // 또는 "login" (제공자에 따라 다름)
+//            String provider = userRequest.getClientRegistration().getRegistrationId(); // 예: "google"
+//            String providerId = oauth2User.getName(); // OAuth2 제공자의 고유 ID
+//
+//            // 사용자 데이터베이스에 이미 존재하는지 확인
+//            return memberRepository.findByEmail(email)
+//                    .map(member -> {
+//                        // 사용자가 존재하면 필요에 따라 정보 업데이트 (예: 최종 로그인, 이름)
+//                        // 또한, 기존 이메일로 첫 OAuth 로그인인 경우 제공자와 providerId가 올바르게 설정되었는지 확인
+//                        if (member.getProvider() == null || member.getProviderId() == null) {
+//                            member.setProvider(provider);
+//                            member.setProviderId(providerId);
+//                            memberRepository.save(member);
+//                        }
+//                        return new CustomOAuth2User(member, oauth2User.getAttributes());
+//                    })
+//                    .orElseGet(() -> {
+//                        // 사용자가 존재하지 않으면 등록
+//                        Member newMember = new Member();
+//                        newMember.setEmail(email);
+//                        // OAuth2의 경우, 보통 비밀번호를 저장하지 않거나 임의의 비밀번호를 생성합니다.
+//                        // 나중에 비밀번호 기반 로그인을 허용할 예정이라면 플레이스홀더나 null을 설정할 수 있습니다.
+//                        newMember.setPassword(null); // OAuth2 사용자는 비밀번호 없음
+//                        newMember.setNickName(name != null ? name : UUID.randomUUID().toString().substring(0, 8)); // 이름 사용 또는 임의 닉네임 생성
+//                        newMember.setInfo("OAuth2 user via " + provider);
+//                        newMember.setProvider(provider);
+//                        newMember.setProviderId(providerId);
+//                        newMember.setRole(Role.USER); // 기본 역할
+//                        memberRepository.save(newMember);
+//                        return new CustomOAuth2User(newMember, oauth2User.getAttributes());
+//                    });
+//        };
+//    }
 }
