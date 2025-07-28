@@ -1,6 +1,7 @@
 package com.example.backend.config;
 
 import com.example.backend.auth.repository.AuthRepository;
+import com.example.backend.jwt.TokenProvider;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Member.Role;
 import com.example.backend.member.repository.MemberRepository;
@@ -11,7 +12,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import lombok.RequiredArgsConstructor;
+import lombok.RequiredArgsConstructor; // 일단 그대로 둡니다.
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,9 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -56,12 +60,19 @@ import java.util.UUID;
 @Configuration
 @EnableMethodSecurity
 @EnableWebSecurity
-@RequiredArgsConstructor
-public class AppConfiguration {
+public class AppConfiguration { // @RequiredArgsConstructor 제거 또는 아래에서 필요한 것만 생성자로 주입
 
     private final MemberRepository memberRepository;
     private final AuthRepository authRepository;
     private final CustomOAuth2UserService customOAuth2UserService;
+    // private final TokenProvider tokenProvider; // <-- 이 줄을 제거하세요!
+
+    // @RequiredArgsConstructor를 사용하지 않으므로, 필요한 필드만 직접 생성자로 주입받습니다.
+    public AppConfiguration(MemberRepository memberRepository, AuthRepository authRepository, CustomOAuth2UserService customOAuth2UserService) {
+        this.memberRepository = memberRepository;
+        this.authRepository = authRepository;
+        this.customOAuth2UserService = customOAuth2UserService;
+    }
 
     @Value("classpath:secret/public.pem")
     private RSAPublicKey publicKey;
@@ -90,18 +101,18 @@ public class AppConfiguration {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http.csrf(c -> c.disable());
-//        http.oauth2ResourceServer(c -> c.jwt(Customizer.withDefaults()));
-
-//        return http.build();
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, TokenProvider tokenProvider) throws Exception {
+        // TokenProvider를 메서드 파라미터로 주입받습니다.
+        // 이렇게 하면 Spring이 TokenProvider 빈을 먼저 생성하고,
+        // 그 다음에 SecurityFilterChain 빈을 생성할 때 TokenProvider를 주입할 수 있습니다.
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable) // 실제 앱에서는 CORS를 제대로 설정하는 것을 고려하세요
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         // 로그인 및 추가, OAuth2 엔드포인트 접근 허용
                         .requestMatchers("/api/member/login", "/api/member/add", "/oauth2/**", "/login/oauth2/code/**").permitAll()
                         // 모든 /api/** 경로를 인증없이 접근 허용
+                        // TODO: 실제 배포 시에는 인증 필요한 API는 이 permitAll()에서 제외하고 .authenticated()로 보호해야 합니다.
                         .requestMatchers("/api/**").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -109,13 +120,15 @@ public class AppConfiguration {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        .defaultSuccessUrl("http://localhost:5173/", true) // OAuth2 로그인 성공 후 홈페이지로 리디렉션
-                        .failureUrl("/login?error") // 실패 시 로그인 페이지로 리디렉션
+                        .successHandler((request, response, authentication) -> {
+                            CustomOAuth2User principal = (CustomOAuth2User) authentication.getPrincipal();
+                            String token = tokenProvider.generateToken(authentication); // 주입받은 tokenProvider 사용
+                            String redirectUrl = "http://localhost:5173/?token=" + token; // 프론트엔드로 JWT 토큰 전달
+                            response.sendRedirect(redirectUrl);
+                        })
+                        .failureUrl("/login?error")
                 )
-                // TODO 다시 이거로 바꿔야함
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 확인용
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
@@ -126,9 +139,8 @@ public class AppConfiguration {
                             response.getWriter().flush();
                         })
                         .permitAll()
-                );
-        // TODO 다시 살려야함
-//                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()))); // JWT 리소스 서버 활성화
 
         return http.build();
     }
@@ -158,15 +170,12 @@ public class AppConfiguration {
         return email -> {
             Member member = memberRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found: " + email));
-            // Member의 기본 Role (예: USER)을 권한으로 사용하거나
-            // authRepository를 통해 추가적인 권한을 조회할 수 있습니다.
             List<String> roles = authRepository.findAuthNamesByMemberId(member.getId());
             if (roles.isEmpty()) {
-                // 특정 권한이 없다면 기본 역할(Role.USER)을 부여
                 roles = Collections.singletonList(member.getRole().name());
             }
 
-            return new CustomUserDetails(member, roles); // CustomUserDetails 객체 반환
+            return new CustomUserDetails(member, roles);
         };
     }
 
@@ -178,45 +187,17 @@ public class AppConfiguration {
         return new ProviderManager(authenticationProvider);
     }
 
-    // 구글 OAuth2UserService를 커스터마이징하여 사용자 등록/로그인 처리
-//    @Bean
-//    public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
-//        DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
-//        return (userRequest) -> {
-//            OAuth2User oauth2User = delegate.loadUser(userRequest);
-//
-//            String email = oauth2User.getAttribute("email");
-//            String name = oauth2User.getAttribute("name"); // 또는 "login" (제공자에 따라 다름)
-//            String provider = userRequest.getClientRegistration().getRegistrationId(); // 예: "google"
-//            String providerId = oauth2User.getName(); // OAuth2 제공자의 고유 ID
-//
-//            // 사용자 데이터베이스에 이미 존재하는지 확인
-//            return memberRepository.findByEmail(email)
-//                    .map(member -> {
-//                        // 사용자가 존재하면 필요에 따라 정보 업데이트 (예: 최종 로그인, 이름)
-//                        // 또한, 기존 이메일로 첫 OAuth 로그인인 경우 제공자와 providerId가 올바르게 설정되었는지 확인
-//                        if (member.getProvider() == null || member.getProviderId() == null) {
-//                            member.setProvider(provider);
-//                            member.setProviderId(providerId);
-//                            memberRepository.save(member);
-//                        }
-//                        return new CustomOAuth2User(member, oauth2User.getAttributes());
-//                    })
-//                    .orElseGet(() -> {
-//                        // 사용자가 존재하지 않으면 등록
-//                        Member newMember = new Member();
-//                        newMember.setEmail(email);
-//                        // OAuth2의 경우, 보통 비밀번호를 저장하지 않거나 임의의 비밀번호를 생성합니다.
-//                        // 나중에 비밀번호 기반 로그인을 허용할 예정이라면 플레이스홀더나 null을 설정할 수 있습니다.
-//                        newMember.setPassword(null); // OAuth2 사용자는 비밀번호 없음
-//                        newMember.setNickName(name != null ? name : UUID.randomUUID().toString().substring(0, 8)); // 이름 사용 또는 임의 닉네임 생성
-//                        newMember.setInfo("OAuth2 user via " + provider);
-//                        newMember.setProvider(provider);
-//                        newMember.setProviderId(providerId);
-//                        newMember.setRole(Role.USER); // 기본 역할
-//                        memberRepository.save(newMember);
-//                        return new CustomOAuth2User(newMember, oauth2User.getAttributes());
-//                    });
-//        };
-//    }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
