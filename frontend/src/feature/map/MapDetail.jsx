@@ -77,9 +77,15 @@ export function MapDetail() {
 
   // 리뷰 작성 모드 토글
   const handleGoToWrite = () => setIsWriting(true);
-  const handleReviewSaved = () => {
+
+  // 리뷰 추가/수정 저장
+  const handleReviewSaved = (review) => {
     setIsWriting(false);
     fetchReviews();
+    console.log(review);
+    // const url = `/facility/${id}`;
+    const params = new URLSearchParams();
+    params.append("focusReviewId", review.id);
   };
   const handleReviewCancel = () => setIsWriting(false);
 
