@@ -126,7 +126,8 @@ function ReviewEdit({ review, onSave, onCancel }) {
   };
 
   const handleRemoveExistingFile = (fileUrlToRemove) => {
-    setDeleteFileNames((prev) => [...prev, fileUrlToRemove]);
+    const fileName = getFileNameFromUrl(fileUrlToRemove);
+    setDeleteFileNames((prev) => [...prev, fileName]);
     setExistingFiles((prev) => prev.filter((url) => url !== fileUrlToRemove));
   };
 
