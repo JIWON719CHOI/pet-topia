@@ -14,14 +14,22 @@ import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import { AuthenticationContext } from "../../common/AuthenticationContextProvider.jsx";
-import { FiUser } from "react-icons/fi";
+import {
+  FiUser,
+  FiMail,
+  FiCalendar,
+  FiEdit3,
+  FiLogOut,
+  FiTrash2,
+  FiStar,
+} from "react-icons/fi";
 
 export function MemberDetail() {
   const [member, setMember] = useState(null);
-  const [reviews, setReviews] = useState(null); // 내 리뷰 목록 상태 추가
   const [modalShow, setModalShow] = useState(false);
   const [password, setPassword] = useState("");
   const [tempCode, setTempCode] = useState("");
+  const [showFullInfo, setShowFullInfo] = useState(false);
   const { logout, hasAccess } = useContext(AuthenticationContext);
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -31,16 +39,6 @@ export function MemberDetail() {
       .get(`/api/member?email=${params.get("email")}`)
       .then((res) => {
         setMember(res.data);
-        if (res.data?.id) {
-          // 회원 정보 불러오면, 그 회원이 쓴 리뷰 목록도 같이 요청
-          axios
-            .get(`/api/review/myReview/${res.data.id}`)
-            .then((res2) => setReviews(res2.data))
-            .catch((err) => {
-              console.error("리뷰 목록 로드 실패:", err);
-              setReviews([]);
-            });
-        }
       })
       .catch((err) => {
         console.error(err);
@@ -94,7 +92,11 @@ export function MemberDetail() {
   if (!member) {
     return (
       <div className="d-flex justify-content-center my-5">
-        <Spinner animation="border" role="status" />
+        <Spinner
+          animation="border"
+          role="status"
+          style={{ color: "#f97316" }}
+        />
       </div>
     );
   }
@@ -116,190 +118,333 @@ export function MemberDetail() {
   const isKakao = member.provider?.includes("kakao");
 
   return (
-    <Row className="justify-content-center my-4">
-      <Col xs={12} md={8} lg={6}>
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3 className="fw-bold mb-0 text-dark">회원 정보</h3>
-          <small className="text-muted" style={{ fontSize: "0.85rem" }}>
-            {isAdmin ? (
-              <span className="badge bg-danger">관리자</span>
-            ) : (
-              <span className="badge bg-secondary">일반 사용자</span>
-            )}
-          </small>
-        </div>
+    <div className="container-fluid py-4">
+      <Row className="justify-content-center">
+        <Col xs={12} lg={10} xl={8}>
+          {/* 상단 헤더 */}
+          <div className="text-center mb-5"></div>
 
-        <Card className="shadow-sm border-0 rounded-3">
-          <Card.Body>
-            <div className="mb-4 d-flex justify-content-center">
-              {profileImageUrl ? (
-                <img
-                  src={profileImageUrl}
-                  alt="프로필 이미지"
-                  className="shadow rounded-circle"
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    objectFit: "cover",
-                    border: "2px solid #ddd",
-                  }}
-                />
-              ) : (
+          {/* 메인 프로필 카드 */}
+          <Card
+            className="border-0 shadow-lg mb-4"
+            style={{
+              borderRadius: "24px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+            }}
+          >
+            <Card.Body className="p-5">
+              <Row className="align-items-center">
+                <Col md={4} className="text-center mb-4 mb-md-0">
+                  <div className="position-relative d-inline-block">
+                    {profileImageUrl ? (
+                      <img
+                        src={profileImageUrl}
+                        alt="프로필 이미지"
+                        className="rounded-circle shadow-lg"
+                        style={{
+                          width: "150px",
+                          height: "150px",
+                          objectFit: "cover",
+                          border: "4px solid rgba(255,255,255,0.3)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                        style={{
+                          width: "150px",
+                          height: "150px",
+                          backgroundColor: "rgba(255,255,255,0.2)",
+                          border: "4px solid rgba(255,255,255,0.3)",
+                        }}
+                      >
+                        <FiUser
+                          size={60}
+                          style={{ color: "rgba(255,255,255,0.8)" }}
+                        />
+                      </div>
+                    )}
+                    {isAdmin && (
+                      <span
+                        className="position-absolute badge bg-warning text-dark"
+                        style={{
+                          bottom: "10px",
+                          right: "10px",
+                          borderRadius: "12px",
+                          padding: "6px 12px",
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                        }}
+                      >
+                        관리자
+                      </span>
+                    )}
+                  </div>
+                </Col>
+                <Col md={8}>
+                  <h2 className="display-6 fw-bold mb-2">{member.nickName}</h2>
+                  <p className="fs-5 mb-3 opacity-75">
+                    <FiMail className="me-2" />
+                    {member.email}
+                  </p>
+                  <p className="mb-3 opacity-75">
+                    <FiCalendar className="me-2" />
+                    {formattedInsertedAt}에 가입
+                  </p>
+                  <div className="d-flex flex-wrap gap-2">
+                    <span className="badge bg-light text-dark px-3 py-2 rounded-pill">
+                      {isKakao ? "카카오 계정" : "일반 계정"}
+                    </span>
+                    <span className="badge bg-success px-3 py-2 rounded-pill">
+                      펫토피아 회원
+                    </span>
+                  </div>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+
+          {/* 상세 정보 카드들 */}
+          <Row className="g-4 mb-4">
+            <Col md={6}>
+              <Card
+                className="h-100 border-0 shadow-sm"
+                style={{ borderRadius: "16px" }}
+              >
+                <Card.Body className="p-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <div
+                      className="rounded-circle me-3 d-flex align-items-center justify-content-center"
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        backgroundColor: "#3b82f6",
+                        color: "white",
+                      }}
+                    >
+                      <FiUser size={20} />
+                    </div>
+                    <div>
+                      <h5 className="mb-0 fw-bold">기본 정보</h5>
+                      <small className="text-muted">Basic Information</small>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <small className="text-muted d-block mb-1">이메일</small>
+                    <div className="fw-medium">{member.email}</div>
+                  </div>
+                  <div>
+                    <small className="text-muted d-block mb-1">별명</small>
+                    <div className="fw-medium">{member.nickName}</div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={6}>
+              <Card
+                className="h-100 border-0 shadow-sm"
+                style={{ borderRadius: "16px" }}
+              >
+                <Card.Body className="p-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <div
+                      className="rounded-circle me-3 d-flex align-items-center justify-content-center"
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        backgroundColor: "#10b981",
+                        color: "white",
+                      }}
+                    >
+                      <FiCalendar size={20} />
+                    </div>
+                    <div>
+                      <h5 className="mb-0 fw-bold">계정 정보</h5>
+                      <small className="text-muted">Account Information</small>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <small className="text-muted d-block mb-1">가입일</small>
+                    <div className="fw-medium">{formattedInsertedAt}</div>
+                  </div>
+                  <div>
+                    <small className="text-muted d-block mb-1">계정 유형</small>
+                    <div className="fw-medium">
+                      {isKakao ? "카카오 계정" : "일반 계정"}
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* 자기소개 카드 */}
+          <Card
+            className="border-0 shadow-sm mb-4"
+            style={{ borderRadius: "16px" }}
+          >
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-3">
                 <div
-                  className="shadow rounded-circle d-flex justify-content-center align-items-center"
+                  className="rounded-circle me-3 d-flex align-items-center justify-content-center"
                   style={{
-                    width: "120px",
-                    height: "120px",
-                    backgroundColor: "#e9ecef",
-                    border: "2px solid #ddd",
-                    color: "#6c757d",
+                    width: "48px",
+                    height: "48px",
+                    backgroundColor: "#f59e0b",
+                    color: "white",
                   }}
                 >
-                  <FiUser size={80} />
+                  <FiEdit3 size={20} />
                 </div>
-              )}
-            </div>
-
-            {!profileImageUrl && <br />}
-
-            <FormGroup controlId="email1" className="mb-3">
-              <FormLabel>이메일</FormLabel>
-              <FormControl
-                readOnly
-                value={member.email}
-                className="bg-light border-0"
+                <div>
+                  <h5 className="mb-0 fw-bold">자기소개</h5>
+                  <small className="text-muted">About Me</small>
+                </div>
+              </div>
+              <div
+                className="p-3 rounded position-relative"
                 style={{
-                  userSelect: "text",
-                  boxShadow: "none",
-                  outline: "none",
+                  backgroundColor: "#f8fafc",
+                  minHeight: "80px",
+                  lineHeight: "1.6",
                 }}
-                onFocus={(e) => e.target.blur()}
-              />
-            </FormGroup>
+              >
+                {member.info ? (
+                  <>
+                    <div
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        maxHeight: showFullInfo ? "none" : "120px",
+                        overflow: "hidden",
+                        transition: "max-height 0.3s ease",
+                      }}
+                    >
+                      {member.info}
+                    </div>
+                    {member.info.length > 100 && (
+                      <div className="text-center mt-2">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => setShowFullInfo(!showFullInfo)}
+                          className="text-decoration-none p-0"
+                          style={{ fontSize: "0.875rem" }}
+                        >
+                          {showFullInfo ? "접기" : "더보기"}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-muted">
+                    아직 자기소개가 등록되지 않았습니다.
+                  </div>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
 
-            <FormGroup controlId="nickName1" className="mb-3">
-              <FormLabel>별명</FormLabel>
-              <FormControl
-                readOnly
-                value={member.nickName}
-                className="bg-light border-0"
-                style={{
-                  userSelect: "text",
-                  boxShadow: "none",
-                  outline: "none",
-                }}
-                onFocus={(e) => e.target.blur()}
-              />
-            </FormGroup>
-
-            <FormGroup controlId="info1" className="mb-3">
-              <FormLabel>자기소개</FormLabel>
-              <FormControl
-                as="textarea"
-                readOnly
-                value={member.info || ""}
-                className="bg-light border-0"
-                style={{
-                  minHeight: "120px",
-                  resize: "none",
-                  userSelect: "text",
-                  fontSize: "1rem",
-                  lineHeight: 1.5,
-                }}
-                onFocus={(e) => e.target.blur()}
-              />
-            </FormGroup>
-
-            <FormGroup controlId="inserted1" className="mb-3">
-              <FormLabel>가입일시</FormLabel>
-              <FormControl
-                readOnly
-                value={formattedInsertedAt}
-                className="bg-light border-0"
-                style={{
-                  userSelect: "text",
-                  boxShadow: "none",
-                  outline: "none",
-                }}
-                onFocus={(e) => e.target.blur()}
-              />
-            </FormGroup>
-
-            {hasAccess(member.email) && (
-              <div className="d-flex justify-content-start gap-2">
+          {/* 액션 버튼들 */}
+          {hasAccess(member.email) && (
+            <Row className="g-3">
+              <Col md={6} lg={3}>
                 <Button
-                  variant="outline-danger"
-                  onClick={handleModalButtonClick}
-                  className="d-flex align-items-center gap-1"
-                >
-                  탈퇴
-                </Button>
-                <Button
-                  variant="outline-info"
+                  variant="primary"
                   onClick={() => navigate(`/member/edit?email=${member.email}`)}
-                  className="d-flex align-items-center gap-1"
+                  className="w-100 py-3 fw-medium d-flex align-items-center justify-content-center"
+                  style={{ borderRadius: "12px" }}
                 >
+                  <FiEdit3 className="me-2" size={18} />
                   수정
                 </Button>
+              </Col>
+              <Col md={6} lg={3}>
+                <Button
+                  variant="success"
+                  onClick={() => navigate(`/review/my/${member.id}`)}
+                  className="w-100 py-3 fw-medium d-flex align-items-center justify-content-center"
+                  style={{ borderRadius: "12px" }}
+                >
+                  <FiStar className="me-2" size={18} />내 리뷰
+                </Button>
+              </Col>
+              <Col md={6} lg={3}>
                 <Button
                   variant="outline-secondary"
                   onClick={handleLogoutClick}
-                  className="d-flex align-items-center gap-1"
+                  className="w-100 py-3 fw-medium d-flex align-items-center justify-content-center"
+                  style={{ borderRadius: "12px" }}
                 >
+                  <FiLogOut className="me-2" size={18} />
                   로그아웃
                 </Button>
+              </Col>
+              <Col md={6} lg={3}>
                 <Button
-                  variant="outline-success"
-                  onClick={() => navigate(`/review/my/${member.id}`)}
-                  className="d-flex align-items-center gap-1"
+                  variant="outline-danger"
+                  onClick={handleModalButtonClick}
+                  className="w-100 py-3 fw-medium d-flex align-items-center justify-content-center"
+                  style={{ borderRadius: "12px" }}
                 >
-                  내가 쓴 리뷰
+                  <FiTrash2 className="me-2" size={18} />
+                  탈퇴
                 </Button>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
+              </Col>
+            </Row>
+          )}
 
-        {/* 탈퇴 확인 모달 */}
-        <Modal show={modalShow} onHide={() => setModalShow(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              {isKakao ? "카카오 회원 탈퇴" : "회원 탈퇴 확인"}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <FormGroup controlId="password1">
-              <FormLabel>
-                {isKakao
-                  ? `탈퇴를 원하시면 ${tempCode}를 아래에 작성하세요.`
-                  : "탈퇴를 원하시면 암호를 입력하세요"}
-              </FormLabel>
-              <FormControl
-                type={isKakao ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  isKakao
-                    ? "탈퇴를 원하시면 위의 코드를 작성하세요."
-                    : "탈퇴를 원하시면 비밀번호를 입력하세요"
-                }
-                autoFocus
-              />
-            </FormGroup>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setModalShow(false)}
-            >
-              취소
-            </Button>
-            <Button variant="danger" onClick={handleDeleteButtonClick}>
-              탈퇴
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      </Col>
-    </Row>
+          {/* 탈퇴 확인 모달 */}
+          <Modal show={modalShow} onHide={() => setModalShow(false)} centered>
+            <Modal.Header closeButton className="border-0 pb-2">
+              <Modal.Title className="fw-bold">
+                {isKakao ? "카카오 회원 탈퇴" : "회원 탈퇴 확인"}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body className="px-4 pb-2">
+              <FormGroup controlId="password1">
+                <FormLabel className="fw-medium mb-3">
+                  {isKakao
+                    ? `탈퇴를 원하시면 ${tempCode}를 아래에 작성하세요.`
+                    : "탈퇴를 원하시면 암호를 입력하세요"}
+                </FormLabel>
+                <FormControl
+                  type={isKakao ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    isKakao
+                      ? "탈퇴를 원하시면 위의 코드를 작성하세요."
+                      : "탈퇴를 원하시면 비밀번호를 입력하세요"
+                  }
+                  autoFocus
+                  className="py-3"
+                  style={{ borderRadius: "12px" }}
+                />
+              </FormGroup>
+            </Modal.Body>
+            <Modal.Footer className="border-0 pt-2">
+              <Button
+                variant="outline-secondary"
+                onClick={() => setModalShow(false)}
+                className="px-4 py-2"
+                style={{ borderRadius: "10px" }}
+              >
+                취소
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteButtonClick}
+                className="px-4 py-2"
+                style={{ borderRadius: "10px" }}
+              >
+                탈퇴
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        </Col>
+      </Row>
+    </div>
   );
 }
