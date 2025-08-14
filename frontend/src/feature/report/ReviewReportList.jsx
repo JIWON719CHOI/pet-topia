@@ -1,5 +1,11 @@
 import { useEffect, useState, useContext } from "react";
-import { Table, Alert, Spinner, OverlayTrigger, Tooltip, } from "react-bootstrap";
+import {
+  Table,
+  Alert,
+  Spinner,
+  OverlayTrigger,
+  Tooltip,
+} from "react-bootstrap";
 import { AuthenticationContext } from "../../common/AuthenticationContextProvider.jsx";
 import { Navigate, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
@@ -61,15 +67,6 @@ export default function ReviewReportList() {
     return <Alert variant="info">신고된 리뷰가 없습니다.</Alert>;
   }
 
-  function renderWithLineBreaks(text) {
-    return text.split("\n").map((line, i) => (
-      <span key={i}>
-        {line}
-        <br />
-      </span>
-    ));
-  }
-
   const handleRowClick = (reviewWriterId) => {
     if (reviewWriterId) {
       navigate(`/review/my/${reviewWriterId}`);
@@ -115,13 +112,7 @@ export default function ReviewReportList() {
               <tr
                 key={id}
                 className={reviewWriterId ? "clickable-row" : ""}
-                onClick={() => {
-                  if (reviewWriterId) {
-                    navigate(`/review/my/${reviewWriterId}`);
-                  } else {
-                    console.error("작성자 정보가 없어 이동할 수 없습니다.");
-                  }
-                }}
+                onClick={() => handleRowClick(reviewWriterId)}
                 title={reviewWriterId ? "작성자 리뷰 보기" : undefined}
               >
                 <td>
