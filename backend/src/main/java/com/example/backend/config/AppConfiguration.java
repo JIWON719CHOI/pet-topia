@@ -109,7 +109,7 @@ public class AppConfiguration {
                         "/api/review/update/**",
                         "/api/review/delete/**"
                 ).authenticated()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll() // todo: 모든 경로 허용.
         );
         return http.build();
     }
