@@ -1,6 +1,5 @@
 // src/components/calendar/GoogleCalendarReview.jsx
 import React, { useState } from "react";
-import { Calendar, AlertCircle } from "lucide-react";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useCalendar } from "./hooks/useCalendar";
 import { CalendarHeader } from "./CalendarHeader";
